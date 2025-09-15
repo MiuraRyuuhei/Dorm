@@ -1,4 +1,635 @@
-<!doctype html><meta charset="utf-8">
-<title>Missing v6</title><body style="font-family:system-ui;background:#111;color:#eee">
-<h1>v6 HTML が見つかりません</h1><p>チャットで「貼り付け用HTMLください」と送ってください。</p>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>寮ポイント & ルーレット v7.4（パチンコ音・音のみモード）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#0e1624;--muted:#94a3b8;--text:#e6edf3;--border:#1f2937;--accent:#60a5fa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,Segoe UI,Helvetica,Arial}
+header{position:sticky;top:0;background:#0b0f14cc;padding:14px;border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}
+h1{margin:0;font-size:18px;display:flex;gap:8px;align-items:center}.badge{background:var(--accent);color:#0b0f14;padding:2px 8px;border-radius:999px;font-size:12px}
+main{max-width:1180px;margin:18px auto;padding:0 14px;display:grid;grid-template-columns:1fr 460px;gap:14px}
+section{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
+h2{font-size:15px;margin:2px 0 8px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input,select,button{border:1px solid var(--border);background:#0b1322;color:var(--text);border-radius:10px;padding:8px 10px}
+button{cursor:pointer}
+.small{font-size:12px;color:var(--muted)}.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px;border-radius:10px;overflow:hidden}
+.tbl th,.tbl td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}.tbl th{color:var(--muted)}
+.tabs{display:flex;gap:6px;margin-bottom:8px}.tabs button{padding:6px 10px}.tabs button.active{background:#0d1b32;border-color:#1e3a8a}
+.hidden{display:none}.right{display:flex;justify-content:flex-end;gap:8px}
+
+/* Overlay */
+#overlay{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:1000}
+#wheelCard{background:#0c1220;border:1px solid var(--border);border-radius:16px;padding:14px;max-width:900px;width:92%}
+#canvasWrap{position:relative;display:flex;justify-content:center;align-items:center}
+#pointer{position:absolute;top:8px;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:24px solid #ffd166;filter:drop-shadow(0 0 6px #000)}
+#wheel{display:block}#fx{position:absolute;top:0;left:0;pointer-events:none}
+.controls{display:flex;gap:8px;justify-content:space-between;margin-top:8px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border:1px solid var(--border);padding:2px 6px;border-radius:999px}
+.colorDot{width:10px;height:10px;border-radius:50%}
+
+/* 確定・豪華演出 */
+.rainbowRing{position:absolute;inset:8px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);
+  filter:blur(6px) saturate(140%) brightness(1.2) opacity(.55);animation:spin360 2s linear infinite}
+@keyframes spin360{to{transform:rotate(360deg)}}
+#cut{position:absolute;inset:0;background:#000;display:none;align-items:center;justify-content:center;z-index:5}
+#cut .stamp{transform:scale(.2) rotate(-12deg);border:5px solid #f87171;color:#fecaca;padding:14px 18px;border-radius:10px;
+  font-weight:900;letter-spacing:10px;font-size:52px;opacity:0;text-shadow:0 3px 10px #000a}
+.showStamp{animation:stampIn .62s ease-out forwards}
+@keyframes stampIn{0%{transform:scale(.2) rotate(-12deg);opacity:0}60%{transform:scale(1.15) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+
+/* 当選・ズーム演出 */
+#winnerBig{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:6}
+#winnerBig .name{font-size:40px;font-weight:900;letter-spacing:4px;padding:12px 16px;border-radius:14px;background:#0b1322cc;border:2px solid #ffd166;
+  color:#fff;text-shadow:0 4px 22px #000;transform:scale(.2);filter:drop-shadow(0 0 10px #ffd166)}
+.zoomPop{animation:zoomPop .9s cubic-bezier(.2,1.3,.24,1) forwards}
+@keyframes zoomPop{0%{transform:scale(.2)}84%{transform:scale(1.15)}100%{transform:scale(1)}}
+.shake{animation:shakey 620ms cubic-bezier(.36,.07,.19,.97) 2}
+@keyframes shakey{10%,90%{transform:translate3d(-1px,0,0)}20%,80%{transform:translate3d(2px,0,0)}30%,50%,70%{transform:translate3d(-4px,0,0)}40%,60%{transform:translate3d(4px,0,0)}}
+
+/* 司会モード */
+.hostFull #wheelCard{max-width:96vw;width:96vw}.hostFull #wheel{width:66vw;height:66vw;max-width:900px;max-height:900px}
+</style>
+</head>
+<body>
+<header><h1>寮ポイント & ルーレット <span class="badge">v7.4</span></h1></header>
+<main>
+  <!-- 左：マスタ表示（データ構造はそのまま） -->
+  <section>
+    <div class="tabs">
+      <button class="active" data-tab="people">人</button>
+      <button data-tab="good">善行</button>
+      <button data-tab="bad">罰則</button>
+      <button data-tab="total">合計ポイント</button>
+    </div>
+
+    <div id="tab-people">
+      <h2>人（ID / 記号 / 名前）</h2>
+      <table class="tbl" id="peopleTbl"><thead><tr><th style="width:80px">ID</th><th>記号</th><th>名前</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="tab-good" class="hidden">
+      <h2>善行（項目 / 点数）</h2>
+      <table class="tbl" id="goodTbl"><thead><tr><th style="width:100px">善行ID</th><th>項目</th><th style="width:80px">点数</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="tab-bad" class="hidden">
+      <h2>罰則（項目 / 点数）</h2>
+      <table class="tbl" id="badTbl"><thead><tr><th style="width:100px">悪行ID</th><th>項目</th><th style="width:80px">点数</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="tab-total" class="hidden">
+      <h2>合計ポイント（ルーレット設定）</h2>
+      <div class="row">
+        <label class="small">基礎重み</label><input id="cfgBase" type="number" step="0.1" value="1"/>
+        <label class="small">最小重み</label><input id="cfgMin" type="number" step="0.1" value="0.1"/>
+        <label class="small">悪行係数α</label><input id="cfgBad" type="number" step="0.1" value="1"/>
+        <label class="small">善行係数β</label><input id="cfgGood" type="number" step="0.1" value="0.5"/>
+      </div>
+      <table class="tbl" id="totalTbl" style="margin-top:8px">
+        <thead><tr><th>ID</th><th>記号</th><th>名前</th><th>善行合計</th><th>悪行合計</th><th>合計</th><th>重み</th><th>割合</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="right small" style="margin-top:6px">重み合計: <span class="mono" id="sumW">0</span></div>
+    </div>
+  </section>
+
+  <!-- 右：操作 -->
+  <section>
+    <h2>ポイント入力</h2>
+    <div class="row">
+      <input id="logDate" type="date"/>
+      <input id="logPersonId" type="number" placeholder="人ID"/>
+      <input id="logSymbol" type="text" placeholder="記号"/>
+      <select id="logKind"><option value="good">善行</option><option value="bad">悪行</option></select>
+      <input id="logDeedId" type="text" placeholder="善行ID/悪行ID (例: G001/B003)"/>
+      <input id="logPoints" type="number" step="1" placeholder="点数(空で既定)"/>
+      <button onclick="addLog()">追加</button>
+    </div>
+
+    <h2 style="margin-top:8px">抽選</h2>
+    <div class="row">
+      <button onclick="openWheel('normal')">ルーレット抽選</button>
+      <button onclick="openWheel('v2')">ルーレット2</button>
+      <label class="small"><input type="checkbox" id="soundEnable" checked/> サウンド</label>
+      <!-- ▼ 追加：サウンドの種類と音のみモード -->
+      <select id="soundMode" title="サウンド種類">
+        <option value="simple" selected>サウンド: シンプル</option>
+        <option value="pachi">サウンド: パチンコ（きゅいーん）</option>
+        <option value="off">サウンド: オフ</option>
+      </select>
+      <label class="small"><input type="checkbox" id="onlySound"/> 演出オフ（音のみ）</label>
+      <button onclick="soundTest()">サウンドテスト</button>
+      <button onclick="toggleHost()">司会モード</button>
+    </div>
+
+    <h2 style="margin-top:8px">データ</h2>
+    <div class="row">
+      <button onclick="exportJson()">バックアップ書き出し</button>
+      <input type="file" id="importFile" accept=".json" onchange="importJson(event)"/>
+      <button onclick="restoreInitial()">初期データ復元</button>
+    </div>
+
+    <h2 style="margin-top:8px">ログ</h2>
+    <div id="logList" class="mono small" style="max-height:260px;overflow:auto;border:1px dashed var(--border);border-radius:8px;padding:8px"></div>
+  </section>
+</main>
+
+<!-- overlay（ホイール） -->
+<div id="overlay" role="dialog" aria-modal="true">
+  <div id="wheelCard">
+    <h2 id="wheelTitle" style="margin:0 0 8px">ルーレット</h2>
+    <div id="canvasWrap">
+      <div id="pointer"></div>
+      <canvas id="wheel" width="620" height="620"></canvas>
+      <canvas id="fx" width="620" height="620"></canvas>
+      <div id="cut"><div class="stamp">確　定</div></div>
+      <div id="winnerBig"><div class="name">当たり！</div></div>
+    </div>
+    <div id="wheelInfo" class="small" style="margin-top:6px;color:#cbd5e1"></div>
+    <div id="legend" class="legend"></div>
+    <div class="controls">
+      <div class="small" id="preMsg"></div>
+      <div>
+        <button id="spinBtn" onclick="spinNow()">回す</button>
+        <button onclick="closeWheel()">閉じる</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/*** ---------- 基本ユーティリティ & データ（構造はそのまま） ---------- ***/
+const $=s=>document.querySelector(s);
+const today=()=> new Date().toISOString().slice(0,10);
+const esc=s=>String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const KEY='dorm-jp-v7'; const LEGACY=['dorm-jp-v6'];
+
+const initial = {
+  people: [
+    {id:1, sym:'H', name:'加藤'},{id:2, sym:'ひ', name:'植口'},{id:3, sym:'◎', name:'見定'},
+    {id:4, sym:'G', name:'吉田'},{id:5, sym:'r', name:'北川'},{id:6, sym:'￥', name:'金'},
+    {id:7, sym:'K', name:'滝山'},{id:8, sym:'⇔', name:'三浦'},{id:9, sym:'🌸', name:'花田'},
+    {id:10, sym:'4', name:'本田'},{id:11, sym:'夕', name:'白川'},{id:12, sym:'e', name:'山田'},
+    {id:13, sym:'メ', name:'目黒'},{id:14, sym:'Y', name:'中田'},{id:15, sym:'F', name:'古家'},
+    {id:16, sym:'※', name:'飯塚'},{id:17, sym:'人', name:'滝'},
+  ],
+  good: [
+    {id:"G001", title:"共用キッチン清掃（シンク・コンロ・床の拭き上げ）", pt:2},
+    {id:"G002", title:"トイレ掃除／浴室清掃", pt:1},
+    {id:"G003", title:"ラウンジ・廊下のモップ掛け／埃取り", pt:1},
+    {id:"G004", title:"ゴミの分別と集積所への搬出", pt:1},
+    {id:"G005", title:"共有冷蔵庫の整理（期限切れ処分）", pt:1},
+    {id:"G006", title:"消耗品補充（トイペ・洗剤等）", pt:1},
+    {id:"G007", title:"設備不具合の報告・一次対応（漏水・破損など）", pt:1},
+    {id:"G008", title:"非常口・避難経路の点検（物品の撤去）", pt:1},
+    {id:"G009", title:"省エネ行動（照明・空調の消し忘れ是正）", pt:1},
+    {id:"G010", title:"イベント運営の手伝い（設営・片付け）", pt:1},
+    {id:"G011", title:"新入生サポート（案内・引越し補助）", pt:1},
+    {id:"G012", title:"体調不良者の買い物代行", pt:1},
+    {id:"G013", title:"清掃用具のメンテ（洗浄・交換）", pt:1},
+    {id:"G014", title:"害虫対策（トラップ設置・発生報告）", pt:1},
+    {id:"G015", title:"ルール掲示・周知の更新", pt:1},
+  ],
+  bad: [
+    {id:"B001", title:"彼女連れ込み", pt:5},
+    {id:"B002", title:"荷物放置", pt:2},
+    {id:"B003", title:"なんかむかつく", pt:10},
+    {id:"B004", title:"悪臭", pt:3},
+    {id:"B005", title:"無断ゲスト", pt:2},
+  ],
+  logs: [],
+  config:{base:1,min:0.1,alpha:1,beta:0.5}
+};
+
+const state = structuredClone(initial);
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function tryMigrate(){
+  for(const k of LEGACY){
+    const raw = localStorage.getItem(k); if(!raw) continue;
+    try{
+      const old = JSON.parse(raw);
+      if(old.people?.length) state.people = old.people;
+      if(old.good?.length)   state.good   = old.good;
+      if(old.bad?.length)    state.bad    = old.bad;
+      if(old.logs?.length){
+        state.logs = old.logs.map(l=>{
+          const p = (typeof l.points==='number')? l.points : (l.val??0);
+          const d = l.date || (l.ts? l.ts.slice(0,10) : today());
+          return {date:d, personId:l.personId||l.pid, kind:l.kind||(p>=0?'good':'bad'), deedId:l.deedId||'', points:p};
+        });
+      }
+      if(old.config) Object.assign(state.config, old.config);
+      return true;
+    }catch{}
+  }
+  return false;
+}
+function loadEnsure(){
+  const raw = localStorage.getItem(KEY);
+  if(raw){ try{ Object.assign(state, JSON.parse(raw)); }catch{} }
+  const migrated = (!state.people?.length||!state.good?.length||!state.bad?.length) && tryMigrate();
+  if(!state.people?.length) state.people=structuredClone(initial.people);
+  if(!state.good?.length)   state.good  =structuredClone(initial.good);
+  if(!state.bad?.length)    state.bad   =structuredClone(initial.bad);
+  if(!state.logs) state.logs=[];
+  if(!state.config) state.config=structuredClone(initial.config);
+  save();
+  return migrated?'migrated':'loaded';
+}
+
+/*** ---------- 集計（データ構造は変更なし） ---------- ***/
+function totals(){
+  const t=new Map(); state.people.forEach(p=>t.set(p.id,{g:0,b:0}));
+  for(const l of state.logs){
+    if(!t.has(l.personId)) continue;
+    if((l.points??0)>=0) t.get(l.personId).g += (l.points??0);
+    else t.get(l.personId).b += -(l.points??0);
+  }
+  const cfg=state.config;
+  const rows = state.people.map(p=>{
+    const o=t.get(p.id)||{g:0,b:0}; const total=o.g-o.b;
+    const w=Math.max(cfg.min, cfg.base + cfg.alpha*o.b - cfg.beta*o.g);
+    return {id:p.id, sym:p.sym, name:p.name, g:o.g, b:o.b, total, w};
+  });
+  const sumW = rows.reduce((s,x)=>s+x.w,0);
+  rows.forEach(r=>r.prob = sumW? r.w/sumW : 0);
+  return {rows,sumW};
+}
+
+/*** ---------- レンダリング ---------- ***/
+function renderPeople(){ const tb=$('#peopleTbl tbody'); tb.innerHTML='';
+  state.people.forEach(p=>{ const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${p.id}</td><td>${esc(p.sym)}</td><td>${esc(p.name)}</td>`; tb.appendChild(tr); });
+}
+function renderGood(){ const tb=$('#goodTbl tbody'); tb.innerHTML='';
+  state.good.forEach(g=>{ const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${g.id}</td><td>${esc(g.title)}</td><td class="mono">${g.pt}</td>`; tb.appendChild(tr); });
+}
+function renderBad(){ const tb=$('#badTbl tbody'); tb.innerHTML='';
+  state.bad.forEach(b=>{ const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${b.id}</td><td>${esc(b.title)}</td><td class="mono">${b.pt}</td>`; tb.appendChild(tr); });
+}
+function renderTotal(){
+  $('#cfgBase').value=state.config.base; $('#cfgMin').value=state.config.min;
+  $('#cfgBad').value=state.config.alpha; $('#cfgGood').value=state.config.beta;
+  const {rows,sumW}=totals(); $('#sumW').textContent=sumW.toFixed(2);
+  const tb=$('#totalTbl tbody'); tb.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${r.id}</td><td>${esc(r.sym)}</td><td>${esc(r.name)}</td>
+      <td class="mono">${r.g}</td><td class="mono">${r.b}</td><td class="mono">${r.total}</td>
+      <td class="mono">${r.w.toFixed(2)}</td><td class="mono">${(r.prob*100).toFixed(2)}%</td>`;
+    tb.appendChild(tr);
+  });
+  $('#logList').textContent = state.logs.map(l=>{
+    const p = state.people.find(x=>x.id===l.personId);
+    const sign = (l.points??0)>=0? '+' : '';
+    return `[${l.date}] ${p?.name||'?'} ${sign}${l.points??0} (${l.kind}/${l.deedId||''})`;
+  }).join('\n') || '(ログなし)';
+}
+function renderAll(){ renderPeople(); renderGood(); renderBad(); renderTotal(); }
+
+/*** ---------- 入力 ---------- ***/
+function resolvePersonId(idInput, symInput){
+  const id=Number(idInput||0); if(id) return id;
+  const sym=(symInput||'').trim(); if(!sym) return null;
+  const p=state.people.find(x=>String(x.sym)===sym);
+  return p?.id ?? null;
+}
+function addLog(){
+  const date=$('#logDate').value || today();
+  const personId=resolvePersonId($('#logPersonId').value,$('#logSymbol').value);
+  const kind=$('#logKind').value;
+  const deedId=($('#logDeedId').value||'').trim().toUpperCase();
+  const override=$('#logPoints').value? Number($('#logPoints').value) : null;
+  if(!personId || !kind) return alert('人ID/記号 と 種別 を入れてください');
+  let base=0;
+  if(kind==='good'){ const m=state.good.find(x=>x.id===deedId); base=m? m.pt : 1; }
+  else { const m=state.bad.find(x=>x.id===deedId); base=m? m.pt : 1; }
+  const p = (kind==='good'? +1 : -1) * (override ?? base);
+  state.logs.unshift({date,personId,kind,deedId,points:p});
+  save(); renderAll();
+}
+
+/*** ---------- ルーレット（3秒減速・確定演出あり） ---------- ***/
+let wheelSegments=[], wheelRotation=0, spinning=false;
+let mode='normal';
+function segColor(i){ const h=(i*137.5)%360; return `hsl(${h}deg 70% 55%)`; }
+
+function openWheel(m){
+  mode=m||'normal';
+  // 設定反映
+  state.config.base=Number($('#cfgBase').value||0);
+  state.config.min =Number($('#cfgMin').value||0);
+  state.config.alpha=Number($('#cfgBad').value||0);
+  state.config.beta =Number($('#cfgGood').value||0);
+
+  const {rows,sumW}=totals();
+  if(sumW<=0) return alert('重み合計が0です（ログを追加してください）');
+
+  let start=0; wheelSegments = rows.map((r,i)=>{ const ang=2*Math.PI*(r.w/sumW);
+    const seg={...r,start:start,end:start+ang,color:segColor(i)}; start+=ang; return seg; });
+  wheelRotation=0; drawWheel();
+
+  // レジェンド
+  const L=$('#legend'); L.innerHTML='';
+  wheelSegments.forEach(s=>{ const el=document.createElement('span');
+    el.innerHTML=`<span class="colorDot" style="background:${s.color}"></span>${esc(s.name)} (${(s.prob*100).toFixed(1)}%)`; L.appendChild(el);
+  });
+
+  $('#wheelTitle').textContent = (mode==='v2')?'ルーレット2':'ルーレット';
+  $('#wheelInfo').textContent  = '「回す」を押すと抽選します（3秒・減速停止）';
+  $('#preMsg').textContent     = '';
+  hideCut(); $('#overlay').style.display='flex';
+}
+
+function closeWheel(){ if(spinning) return; $('#overlay').style.display='none'; }
+
+function drawWheel(){
+  const cvs=$('#wheel'), ctx=cvs.getContext('2d'); const W=cvs.width,H=cvs.height, cx=W/2, cy=H/2, r=Math.min(W,H)/2-10;
+  ctx.clearRect(0,0,W,H);
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(wheelRotation);
+  wheelSegments.forEach(s=>{
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,s.start,s.end); ctx.closePath();
+    ctx.fillStyle=s.color; ctx.fill(); ctx.strokeStyle="#0b0f14"; ctx.lineWidth=2; ctx.stroke();
+    const mid=(s.start+s.end)/2; ctx.save(); ctx.rotate(mid); ctx.textAlign="right"; ctx.fillStyle="#0b0f14"; ctx.font="bold 12px ui-sans-serif";
+    const label=s.name.length>8?s.name.slice(0,8)+'…':s.name; ctx.fillText(label+" "+Math.round(s.prob*100)+"%", r-8, 4); ctx.restore();
+  });
+  ctx.beginPath(); ctx.arc(0,0,48,0,Math.PI*2); ctx.fillStyle="#0b1322"; ctx.fill(); ctx.strokeStyle="#1f2937"; ctx.stroke();
+  ctx.restore();
+}
+
+function angleToIndex(rot){
+  let a=(-Math.PI/2)-rot; a=(a%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+  for(let i=0;i<wheelSegments.length;i++){const s=wheelSegments[i]; if(a>=s.start&&a<s.end) return i;}
+  return wheelSegments.length-1;
+}
+function centerOf(seg){ return (seg.start+seg.end)/2; }
+function targetRotationForCenter(center, current, minSpins=3){
+  const base = -Math.PI/2 - center;
+  const k = Math.ceil( (current - base) / (2*Math.PI) + minSpins );
+  return base + k*2*Math.PI;
+}
+
+function spinNow(){
+  if(spinning) return;
+  $('#spinBtn').disabled = true;
+
+  if(soundOn()) startSpinSfx(3000);
+
+  if(mode==='v2'){
+    // ルーレット2：途中で確定カットイン→古家に強制着地
+    spinWithCutInToFurue();
+  }else{
+    // 通常：重みに比例して当選、3秒で減速停止
+    const winner = pickByWeight();
+    const center = centerOf(winner);
+    const final  = targetRotationForCenter(center, wheelRotation, 5);
+    animateSpin(wheelRotation, final, 3000, easeOutCubic, ()=>{
+      finishSpin(winner);
+    });
+  }
+}
+
+function pickByWeight(){
+  let total=0; const lens=wheelSegments.map(s=>s.end-s.start); total=lens.reduce((a,b)=>a+b,0);
+  let r=Math.random()*total, w=null; for(const s of wheelSegments){ r-= (s.end-s.start); if(r<=0){ w=s; break; } }
+  return w || wheelSegments.at(-1);
+}
+
+function spinWithCutInToFurue(){
+  const phase1=1200, phase2=1800;
+  const intermediate = wheelRotation + 2.5*Math.PI + Math.random()*Math.PI;
+  animateSpin(wheelRotation, intermediate, phase1, easeOutCubic, ()=>{
+    // カットイン：確定→古江へ
+    if(!onlySound()) showCut(true);
+    if(soundOn()){
+      if(soundMode()==='pachi') playKyuiSequence(); else playCutInSfx();
+    }
+    const furue = wheelSegments.find(s=> String(s.sym)==='F' || /古家/.test(s.name) ) || wheelSegments[0];
+    const center = centerOf(furue);
+    const final  = targetRotationForCenter(center, wheelRotation, 4);
+    animateSpin(wheelRotation, final, phase2, easeOutCubic, ()=>{
+      finishSpin(furue);
+    });
+  });
+}
+
+function animateSpin(from,to,dur,ease,done){
+  const start=performance.now(); spinning=true;
+  let lastIdx = angleToIndex(from);
+  function frame(t){
+    const p=Math.min(1,(t-start)/dur); const e=ease(p);
+    wheelRotation = from + (to-from)*e;
+    drawWheel();
+    const idx = angleToIndex(wheelRotation);
+    if(idx!==lastIdx && soundOn()) tick();
+    lastIdx = idx;
+    if(p<1) requestAnimationFrame(frame); else { spinning=false; done&&done(); }
+  }
+  requestAnimationFrame(frame);
+}
+const easeOutCubic = p => 1 - Math.pow(1-p,3);
+
+/*** ---------- 演出/音 ---------- ***/
+function onlySound(){ return $('#onlySound').checked; }
+function soundMode(){ return $('#soundMode').value; }
+function soundOn(){ return $('#soundEnable').checked && soundMode()!=='off'; }
+
+function showCut(withRing){
+  const cut=$('#cut'); cut.style.display='flex';
+  const st=cut.querySelector('.stamp'); st.classList.remove('showStamp'); void st.offsetWidth; st.classList.add('showStamp');
+  if(withRing){ const wrap=$('#canvasWrap'); wrap.querySelectorAll('.rainbowRing').forEach(n=>n.remove());
+    const ring=document.createElement('div'); ring.className='rainbowRing'; wrap.appendChild(ring); }
+}
+function hideCut(){ $('#cut').style.display='none'; $('#canvasWrap').querySelectorAll('.rainbowRing').forEach(n=>n.remove()); }
+
+function finishSpin(win){
+  hideCut();
+  if(!onlySound()){
+    $('#wheelCard').classList.add('shake'); setTimeout(()=>$('#wheelCard').classList.remove('shake'),1200);
+    const wb=$('#winnerBig'); wb.style.display='flex'; const label=win.name + (win.sym?`（${win.sym}）`:'');
+    wb.querySelector('.name').textContent = (mode==='v2'?'確定！ ':'当たり！ ') + label;
+    const nm=wb.querySelector('.name'); nm.classList.remove('zoomPop'); void nm.offsetWidth; nm.classList.add('zoomPop');
+    confetti(); spotlight(win);
+  }
+  if(soundOn()){ stopSpinSfx(); setTimeout(()=>playJackpot(), 80); }
+  setTimeout(()=>{ if(!onlySound()) $('#winnerBig').style.display='none'; $('#spinBtn').disabled=false; }, 3200);
+}
+
+function spotlight(win){
+  const fx=$('#fx'), ctx=fx.getContext('2d'); const W=fx.width,H=fx.height,cx=W/2,cy=H/2,r=Math.min(W,H)/2-10;
+  const ang=(win.end-win.start); const t0=performance.now();
+  function draw(t){ const p=Math.min(1,(t-t0)/1200);
+    ctx.clearRect(0,0,W,H); ctx.save(); ctx.translate(cx,cy); ctx.globalCompositeOperation='lighter';
+    const grd=ctx.createRadialGradient(0,0,r*.3,0,0,r); grd.addColorStop(0,'rgba(255,255,200,.14)'); grd.addColorStop(1,'rgba(255,255,160,0)');
+    ctx.fillStyle=grd; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,-ang/2,+ang/2); ctx.closePath(); ctx.fill(); ctx.restore();
+    if(p<1) requestAnimationFrame(draw);
+  } requestAnimationFrame(draw);
+}
+
+function confetti(){
+  if(onlySound()) return;
+  const fx=$('#fx'), ctx=fx.getContext('2d'); const W=fx.width,H=fx.height;
+  const parts=Array.from({length:240},()=>({x:W/2,y:40,vx:(Math.random()-.5)*6,vy:Math.random()*-1,g:.22+Math.random()*.12,s:4+Math.random()*3,r:Math.random()*6,vr:(Math.random()-.5)*.2,c:`hsl(${Math.random()*360}deg 80% 60%)`,life:160}));
+  let t=0; const timer=setInterval(()=>{t++; ctx.clearRect(0,0,W,H);
+    parts.forEach(p=>{p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;p.life--; ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s);ctx.restore();});
+    if(t>200){clearInterval(timer);ctx.clearRect(0,0,W,H);} },16);
+}
+
+/*** ---------- WebAudio（パチンコ風 + 既存音） ---------- ***/
+let AC=null; const ac=()=>AC||(AC=new (window.AudioContext||window.webkitAudioContext)());
+
+// 回転中のワーーン（モード別）
+let spinNodes=null;
+function startSpinSfx(ms){
+  stopSpinSfx();
+  if(soundMode()==='pachi'){ return startPachiSpin(ms); }
+  // simple
+  const ctx=ac();
+  const g=ctx.createGain(); g.gain.value=0.12; g.connect(ctx.destination);
+  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=900; bp.Q.value=0.6; bp.connect(g);
+  const trem=ctx.createOscillator(); const tremGain=ctx.createGain(); trem.frequency.value=8; tremGain.gain.value=0.35; trem.connect(tremGain.gain); trem.start();
+  const o1=ctx.createOscillator(), o2=ctx.createOscillator(), o3=ctx.createOscillator();
+  [o1,o2,o3].forEach(o=>{o.type='sawtooth'; o.connect(tremGain);}); tremGain.connect(bp);
+  const now=ctx.currentTime;
+  o1.frequency.setValueAtTime(520,now); o1.frequency.exponentialRampToValueAtTime(160, now+ms/1000);
+  o2.frequency.setValueAtTime(740,now); o2.frequency.exponentialRampToValueAtTime(220, now+ms/1000);
+  o3.frequency.setValueAtTime(980,now); o3.frequency.exponentialRampToValueAtTime(320, now+ms/1000);
+  [o1,o2,o3].forEach(o=>o.start());
+  spinNodes={o1,o2,o3,g,bp,trem,tremGain};
+}
+function startPachiSpin(ms){
+  const ctx=ac();
+  const g=ctx.createGain(); g.gain.value=0.12; g.connect(ctx.destination);
+  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1200; bp.Q.value=1.2; bp.connect(g);
+  // white noise
+  const buf=ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+  const data=buf.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=Math.random()*2-1;
+  const noise=ctx.createBufferSource(); noise.buffer=buf; noise.loop=true; noise.connect(bp); noise.start();
+  // motor hum
+  const o=ctx.createOscillator(), vibr=ctx.createOscillator(), vg=ctx.createGain(); o.type='sawtooth';
+  vibr.frequency.value=7; vg.gain.value=25; vibr.connect(vg); vg.connect(o.frequency);
+  o.connect(bp); o.frequency.setValueAtTime(400,ctx.currentTime); o.frequency.exponentialRampToValueAtTime(180, ctx.currentTime+ms/1000);
+  o.start();
+  spinNodes={noise,o,bp,g,vibr,vg};
+}
+function stopSpinSfx(){
+  if(!spinNodes) return;
+  const ctx=ac();
+  try{
+    Object.values(spinNodes).forEach(n=>{
+      if(n instanceof OscillatorNode){ n.stop(ctx.currentTime+0.08); }
+      if(n instanceof AudioBufferSourceNode){ n.stop(ctx.currentTime+0.08); }
+      if(n instanceof GainNode){ n.gain && n.gain.setTargetAtTime(0, ctx.currentTime, 0.06); }
+    });
+  }catch{}
+  spinNodes=null;
+}
+
+// セグメント通過のチク音
+function tick(){ const ctx=ac(); const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type='square'; o.frequency.setValueAtTime(1200,ctx.currentTime);
+  g.gain.setValueAtTime(.06,ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+.06);
+  o.connect(g).connect(ctx.destination); o.start(); o.stop(ctx.currentTime+.07);
+}
+
+// カットインSE（既存シンプル）
+function playCutInSfx(){
+  const ctx=ac(); const o=ctx.createOscillator(), g=ctx.createGain(); const f=ctx.createBiquadFilter();
+  o.type='triangle'; f.type='lowpass'; f.frequency.value=4000; o.connect(f).connect(g).connect(ctx.destination);
+  const now=ctx.currentTime; g.gain.value=0.0001; g.gain.exponentialRampToValueAtTime(0.25, now+0.05);
+  o.frequency.setValueAtTime(220, now); o.frequency.exponentialRampToValueAtTime(1200, now+0.35);
+  g.gain.exponentialRampToValueAtTime(0.0001, now+0.6);
+  o.start(); o.stop(now+0.6);
+}
+
+// ★パチンコ「きゅいきゅいきゅいーーん」シーケンス
+function playKyuiSequence(){
+  const ctx=ac();
+  const master=ctx.createGain(); master.gain.value=0.22; master.connect(ctx.destination);
+
+  function kyui(t0, dur, f0, f1){
+    // 2発のリード + ノイズの煌めき
+    const o=ctx.createOscillator(), g=ctx.createGain(), lfo=ctx.createOscillator(), lfg=ctx.createGain();
+    o.type='triangle'; lfo.frequency.value=8; lfg.gain.value=20; lfo.connect(lfg); lfg.connect(o.frequency);
+    const filt=ctx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=2500; filt.Q.value=3.0;
+    o.connect(filt).connect(g).connect(master);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.28, t0+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(f1, t0+dur*0.85);
+
+    // きらきらノイズ
+    const nb=ctx.createBuffer(1, ctx.sampleRate*dur, ctx.sampleRate);
+    const arr=nb.getChannelData(0); for(let i=0;i<arr.length;i++) arr[i]=(Math.random()*2-1)*0.4;
+    const n=ctx.createBufferSource(); n.buffer=nb; const nfil=ctx.createBiquadFilter(); nfil.type='highpass'; nfil.frequency.value=1800;
+    const ng=ctx.createGain(); ng.gain.value=0.1; n.connect(nfil).connect(ng).connect(master); n.start(t0); n.stop(t0+dur);
+
+    o.start(t0); o.stop(t0+dur);
+    lfo.start(t0); lfo.stop(t0+dur);
+  }
+
+  const t=ctx.currentTime;
+  kyui(t+0.00, 0.28, 600, 1600);   // きゅい
+  kyui(t+0.32, 0.28, 650, 1700);   // きゅい
+  kyui(t+0.64, 0.65, 700, 3200);   // きゅいーーん（長め）
+}
+
+// 当たりファンファーレ（軽くパチンコ寄り）
+function playJackpot(){
+  const ctx=ac();
+  const notes=[659,784,988,784,988,1175,1319]; // E5 G5 B5 G5 B5 D6 E6
+  const g=ctx.createGain(); g.gain.value=0.0001; g.connect(ctx.destination);
+  const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=4800; f.Q.value=0.8; f.connect(g);
+
+  let t=ctx.currentTime;
+  g.gain.exponentialRampToValueAtTime(0.22, t+0.03);
+
+  for(let i=0;i<notes.length;i++){
+    const o=ctx.createOscillator(); o.type='square'; o.frequency.value=notes[i];
+    const og=ctx.createGain(); og.gain.value=0.14; o.connect(f); o.start(t+i*0.12); o.stop(t+i*0.12+0.22);
+  }
+  // ドドドン（キック風）
+  for(let k=0;k<3;k++){
+    const b=ctx.createOscillator(), bg=ctx.createGain(); b.type='sine'; b.frequency.setValueAtTime(140, t+0.05+k*0.18);
+    bg.gain.setValueAtTime(0.24, t+0.05+k*0.18); bg.gain.exponentialRampToValueAtTime(0.0001, t+0.2+k*0.18);
+    b.connect(bg).connect(ctx.destination); b.start(t+0.05+k*0.18); b.stop(t+0.22+k*0.18);
+  }
+  setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.2); }, 1000);
+}
+
+/*** ---------- UI雑多 ---------- ***/
+document.querySelectorAll('.tabs button').forEach(b=>{
+  b.addEventListener('click',()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    ['people','good','bad','total'].forEach(k=>document.getElementById('tab-'+k).classList.add('hidden'));
+    document.getElementById('tab-'+b.dataset.tab).classList.remove('hidden');});
+});
+function toggleHost(){ document.body.classList.toggle('hostFull'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeWheel(); });
+
+// サウンドだけ鳴らして確認
+function soundTest(){
+  if(!soundOn()){ alert('サウンドがオフです。チェックやモードを確認してください。'); return; }
+  if(soundMode()==='pachi'){ playKyuiSequence(); } else { playCutInSfx(); }
+}
+
+/*** ---------- 起動 ---------- ***/
+document.addEventListener('DOMContentLoaded', ()=>{
+  $('#logDate').value = today();
+  loadEnsure(); // 旧保存データに「古江/ふるえ」が残っていたら一度だけ置換
+(function(){
+  const p = state.people.find(x => x.id===15 && (x.name==='古江' || x.sym==='ふるえ'));
+  if (p) { p.name = '古家'; p.sym = 'F'; save(); }
+})();
+renderAll();
+});
+</script>
 </body>
+</html>
